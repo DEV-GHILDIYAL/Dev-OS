@@ -67,9 +67,8 @@ public partial class MainWindow : Window
             var reply = await operation();
             observation = reply.Observation;
             if (observation != null) Render(observation);
-            else VmState.Text = EnvironmentState.ErrorUnknown.Label();
-            Result.Text = Explain(reply.Success ? observation?.Code ?? reply.Code : reply.Code);
-        }
+            else VmState.Text = (reply.Code ?? "UNKNOWN_ERROR").Replace('_', ' ');
+            Result.Text = Explain(reply.Success ? (observation?.Code ?? reply.Code ?? "") : (reply.Code ?? ""));        }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223) { Result.Text = "Administrator request cancelled. Check compatibility to refresh the VM state."; }
         catch { observation = null; VmState.Text = EnvironmentState.ErrorUnknown.Label(); Result.Text = "Operation failed or timed out. Check compatibility again; partial resources are preserved."; }
         finally { busy = false; Actions.IsEnabled = true; CheckActions.IsEnabled = true; }
@@ -80,17 +79,18 @@ public partial class MainWindow : Window
         VmState.Text = o.State.Label();
         VmDetails.Text = $"VM power: {o.Power} | Guest boot readiness: unknown\nNetwork: {o.Network}\nObserved: {o.ObservedAt.LocalDateTime:T}";
     }
-    private static string Explain(string code) => code switch
-    {
+private static string Explain(string? code) => code switch    
+{
         "OK" => "",
         "BROKER_NOT_INSTALLED" => "Install the broker using scripts/Install-DevOS.ps1 before requesting administrator operations.",
         "HYPERV_MODULE_MISSING" => "Hyper-V PowerShell management module is missing. Hyper-V setup requires an explicit administrator action.",
+        "WINDOWS_EDITION_UNSUPPORTED" => "This Windows edition does not support the Hyper-V role required by Phase 1. Use Windows Pro or Enterprise on a compatible host.",
         "VMMS_UNAVAILABLE" => "The Virtual Machine Management service is missing or not running.",
         "HYPERV_QUERY_DENIED_OR_FAILED" => "Hyper-V query could not complete. Use Check with Administrator Access.",
         "INSUFFICIENT_FREE_RAM" => "At least 5 GiB free RAM is required before creating or starting this 4 GiB VM.",
         "INSUFFICIENT_DISK_SPACE" => "At least 74 GiB free space is required for the fixed disk and host reserve.",
         "SHUTDOWN_TIMEOUT" => "Shutdown timed out. The VM may still be running; no forced power-off was performed.",
-        _ => code.Replace('_', ' ')
+        _ => (code ?? "UNKNOWN_ERROR").Replace('_', ' ')
     };
     protected override void OnClosing(CancelEventArgs e)
     {

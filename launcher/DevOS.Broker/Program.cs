@@ -6,6 +6,8 @@ using DevOS.HyperV;
 
 if (args.Length != 2 || !Guid.TryParseExact(args[0], "N", out var nonce) ||
     !int.TryParse(args[1], out var launcherPid) || launcherPid <= 0) return 2;
+NamedPipeServerStream? pipe = null;
+var authenticated = false;
 try
 {
     using var identity = WindowsIdentity.GetCurrent();
@@ -22,10 +24,11 @@ try
     security.SetOwner(identity.User!);
     security.AddAccessRule(new PipeAccessRule(new SecurityIdentifier("S-1-5-2"), PipeAccessRights.FullControl, AccessControlType.Deny));
     security.AddAccessRule(new PipeAccessRule(identity.User!, PipeAccessRights.FullControl, AccessControlType.Allow));
-    using var pipe = NamedPipeServerStreamAcl.Create("DevOS-" + nonce.ToString("N"), PipeDirection.InOut, 1,
+    pipe = NamedPipeServerStreamAcl.Create("DevOS-" + nonce.ToString("N"), PipeDirection.InOut, 1,
         PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 4096, 65536, security);
     await pipe.WaitForConnectionAsync(connectTimeout.Token);
     if (!PipeProtocol.GetNamedPipeClientProcessId(pipe.SafePipeHandle, out var clientPid) || clientPid != launcherPid) return 6;
+    authenticated = true;
     var request = Protocol.Parse(await PipeProtocol.ReadAsync(pipe, Protocol.MaxRequestBytes, connectTimeout.Token));
     ManagedPaths.RejectReparsePoints(ManagedPaths.Root);
     var lockPath = ManagedPaths.Under(ManagedPaths.Root, "operation.lock");
@@ -40,10 +43,23 @@ try
         await File.AppendAllTextAsync(auditPath, System.Text.Json.JsonSerializer.Serialize(new
         {
             Time = DateTimeOffset.UtcNow, Operation = request.Operation.ToString(), reply.Success,
-            Code = System.Text.RegularExpressions.Regex.IsMatch(reply.Code, "^[A-Z_]{1,80}$") ? reply.Code : "UNKNOWN_ERROR"
+            Code = System.Text.RegularExpressions.Regex.IsMatch(reply.Code ?? "", "^[A-Z_]{1,80}$") ? reply.Code : "UNKNOWN_ERROR"
         }) + Environment.NewLine);
     using var replyTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
     await PipeProtocol.WriteAsync(pipe, reply, replyTimeout.Token);
     return reply.Success ? 0 : 1;
 }
-catch { return 10; }
+catch
+{
+    if (authenticated && pipe?.IsConnected == true)
+    {
+        try
+        {
+            using var replyTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await PipeProtocol.WriteAsync(pipe, new BrokerReply(false, "BROKER_FAILED_RECHECK_STATE"), replyTimeout.Token);
+        }
+        catch { }
+    }
+    return 10;
+}
+finally { pipe?.Dispose(); }

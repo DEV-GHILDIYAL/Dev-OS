@@ -21,12 +21,19 @@ public static class BrokerClient
         using var brokerProcess = Process.Start(start) ?? throw new IOException("Broker launch failed.");
         using var pipe = new NamedPipeClientStream(".", "DevOS-" + nonce, PipeDirection.InOut, PipeOptions.Asynchronous);
         using var connectionTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(35));
-        await pipe.ConnectAsync(connectionTimeout.Token);
-        if (!PipeProtocol.GetNamedPipeServerProcessId(pipe.SafePipeHandle, out var pid) || pid != brokerProcess.Id)
-            throw new InvalidDataException("Broker identity mismatch.");
-        using var operationTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(31));
-        await PipeProtocol.WriteAsync(pipe, new BrokerRequest(operation), operationTimeout.Token);
-        var result = await PipeProtocol.ReadAsync(pipe, 65536, operationTimeout.Token);
-        return JsonSerializer.Deserialize<BrokerReply>(result, Protocol.Json) ?? new(false, "INVALID_BROKER_REPLY");
+        try
+        {
+            await pipe.ConnectAsync(connectionTimeout.Token);
+            if (!PipeProtocol.GetNamedPipeServerProcessId(pipe.SafePipeHandle, out var pid) || pid != brokerProcess.Id)
+                return new(false, "BROKER_IDENTITY_MISMATCH");
+            using var operationTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(31));
+            await PipeProtocol.WriteAsync(pipe, new BrokerRequest(operation), operationTimeout.Token);
+            var result = await PipeProtocol.ReadAsync(pipe, 65536, operationTimeout.Token);
+            return JsonSerializer.Deserialize<BrokerReply>(result, Protocol.Json) ?? new(false, "INVALID_BROKER_REPLY");
+        }
+        catch (OperationCanceledException) { return new(false, "BROKER_TIMEOUT"); }
+        catch (IOException) { return new(false, "BROKER_DISCONNECTED"); }
+        catch (InvalidDataException) { return new(false, "INVALID_BROKER_REPLY"); }
+        catch (JsonException) { return new(false, "INVALID_BROKER_REPLY"); }
     }
 }

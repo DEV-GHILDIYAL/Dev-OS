@@ -13,7 +13,7 @@ public sealed record VmConfiguration(int Generation = 2, int Cpu = 2, int Memory
     }
 }
 public sealed record BrokerRequest(Operation Operation);
-public sealed record BrokerReply(bool Success, string Code, Observation? Observation = null);
+public sealed record BrokerReply(bool Success, string? Code, Observation? Observation = null);
 public sealed record Observation
 {
     public string Windows { get; init; } = "Unknown";

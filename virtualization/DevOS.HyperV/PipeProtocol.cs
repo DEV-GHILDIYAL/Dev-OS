@@ -14,17 +14,26 @@ public static class PipeProtocol
     public static extern bool GetNamedPipeServerProcessId(SafePipeHandle pipe, out uint pid);
     public static async Task<byte[]> ReadAsync(PipeStream pipe, int limit, CancellationToken token)
     {
-        var length = new byte[4];
-        await pipe.ReadExactlyAsync(length, token);
-        var count = BinaryPrimitives.ReadInt32LittleEndian(length);
-        if (count <= 0 || count > limit) throw new InvalidDataException("Message too large.");
-        var bytes = new byte[count];
-        await pipe.ReadExactlyAsync(bytes, token);
-        return bytes;
+        try
+        {
+            var length = new byte[4];
+            await pipe.ReadExactlyAsync(length, token);
+            var count = BinaryPrimitives.ReadInt32LittleEndian(length);
+            if (count <= 0 || count > limit) throw new InvalidDataException("Message too large.");
+            var bytes = new byte[count];
+            await pipe.ReadExactlyAsync(bytes, token);
+            return bytes;
+        }
+        catch (EndOfStreamException ex)
+        {
+            throw new IOException("Pipe closed before a complete message was received.", ex);
+        }
     }
+
     public static async Task WriteAsync<T>(PipeStream pipe, T value, CancellationToken token)
     {
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(value, Protocol.Json);
+        var type = value?.GetType() ?? typeof(T);
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(value, type, Protocol.Json);
         var length = new byte[4];
         BinaryPrimitives.WriteInt32LittleEndian(length, bytes.Length);
         await pipe.WriteAsync(length, token);

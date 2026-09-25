@@ -12,6 +12,9 @@ $name = 'DevOS-Phase1'
 $failure = 'OPERATION_FAILED'
 
 function Fail([string] $code) { $script:failure = $code; throw $code }
+function UnsupportedHostEdition([string] $edition) {
+    return $edition -match '^Core'
+}
 function CheckPath([string] $path) {
     $current = [IO.Path]::GetFullPath($path)
     while ($current) {
@@ -131,6 +134,8 @@ function Inspect {
     if ($service) { $o.Vmms=$service.Status.ToString() }
     $r = ReadRegistration
     $o.Registered = [bool]$r
+    $edition = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').EditionID
+    if (UnsupportedHostEdition $edition) { $o.Code='WINDOWS_EDITION_UNSUPPORTED'; return $o }
     if ((Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending') -and !$module) {
         $o.Feature = 'Reboot pending; management components not yet available'
     }
@@ -164,6 +169,8 @@ try {
     }
     $owner = (Get-ItemProperty 'HKLM:\SOFTWARE\DevOS').OwnerSid
     if ($owner -ne [Security.Principal.WindowsIdentity]::GetCurrent().User.Value) { Fail 'OWNER_IDENTITY_MISMATCH' }
+    $edition = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').EditionID
+    if (UnsupportedHostEdition $edition) { Fail 'WINDOWS_EDITION_UNSUPPORTED' }
     if ($operation -eq 'PrepareMedia') { PrepareMedia }
     else {
         if (!(Get-Module -ListAvailable Hyper-V)) { Fail 'HYPERV_MODULE_MISSING' }
@@ -232,5 +239,9 @@ try {
     @{Success=$true; Code='OK'; Observation=(Inspect)} | ConvertTo-Json -Depth 5 -Compress
 } catch {
     # Output only bounded allowlisted error categories, never raw PowerShell exceptions.
-    @{Success=$false; Code=$script:failure; Observation=$null} | ConvertTo-Json -Compress
+    $edition = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction SilentlyContinue).EditionID
+    $code = if (UnsupportedHostEdition $edition) { 'WINDOWS_EDITION_UNSUPPORTED' }
+        elseif ([string]::IsNullOrWhiteSpace($script:failure)) { 'OPERATION_FAILED' }
+        else { $script:failure }
+    @{Success=$false; Code=$code; Observation=$null} | ConvertTo-Json -Compress
 }

@@ -16,6 +16,12 @@ function Reject([scriptblock]$body,[string]$expected) {
     try { & $body | Out-Null } catch { $caught=$true }
     Assert ($caught -and $script:failure -eq $expected)
 }
+Test 'host edition check rejects Home variants' {
+    Assert (UnsupportedHostEdition 'CoreSingleLanguage')
+    Assert (UnsupportedHostEdition 'Core')
+    Assert (!(UnsupportedHostEdition 'Professional'))
+    Assert (!(UnsupportedHostEdition 'Enterprise'))
+}
 $name='DevOS-Phase1'
 $id=[guid]::NewGuid()
 $script:fixture=[pscustomobject]@{ VmId=$id.ToString(); Stage='Complete'; Marker=('DevOS:'+ [guid]::NewGuid().ToString('N')) }

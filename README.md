@@ -6,7 +6,7 @@ The launcher uses WPF and .NET 10. A short-lived UAC broker handles privileged o
 
 ## Build
 
-On Windows x64, use the pinned .NET 10.0.401 SDK, or run `scripts/Install-LocalSdk.ps1` to download and verify a local SDK from Microsoft. Then:
+On Windows x64, use a .NET 10 SDK from feature band 10.0.2 or newer. The SDK resolution starts at 10.0.203 and permits later .NET 10 feature bands. If none is installed, run `scripts/Install-LocalSdk.ps1` to download and verify 10.0.401 from Microsoft. Then:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\Build.ps1
@@ -21,6 +21,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\Check-Compatibil
 ```
 
 This only observes the system. A feature state of Unknown is not proof of absence. An already running hypervisor takes precedence over inconclusive CPU firmware flags.
+
+Phase 1 requires a Windows edition with the Hyper-V role. Windows Home, including Home Single Language, cannot install that role. The check reports `WINDOWS_EDITION_UNSUPPORTED` for Home editions. VM creation also requires at least 74 GiB free on the ProgramData drive and 5 GiB available RAM; the launcher shows the observed values before setup.
 
 Enable Hyper-V only after explicit consent using `scripts/Enable-HyperV.ps1` from an administrator PowerShell. It enables `Microsoft-Hyper-V-All` with `-NoRestart`; the result is in `artifacts/hyperv-setup.json`. Reboot manually when ready if required. Do not disable Windows protections.
 

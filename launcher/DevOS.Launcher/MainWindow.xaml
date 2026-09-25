@@ -26,4 +26,14 @@
       <TextBlock x:Name="Result" Text="" Margin="0,16,0,0" Foreground="#F1C968"/>
     </StackPanel>
   </ScrollViewer>
+  <Window.Resources>
+    <Style TargetType="Button">
+      <Setter Property="Foreground" Value="#10201D"/>
+      <Setter Property="Background" Value="#B9D8CF"/>
+      <Setter Property="BorderBrush" Value="#D8EEE7"/>
+      <Setter Property="Padding" Value="14,9"/>
+      <Setter Property="Margin" Value="0,0,10,10"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+  </Window.Resources>
 </Window>

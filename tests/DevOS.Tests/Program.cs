@@ -1,4 +1,5 @@
 using System.Text;
+using System.IO.Pipes;
 using DevOS.HyperV;
 
 if (args is ["--inspect"] or ["--broker-inspect"])
@@ -58,6 +59,19 @@ Test("broker accepts only enum operation", () =>
     foreach (var input in new[] { "{}", "null", "{\"Operation\":100}", "{\"Operation\":\"Delete\"}", "{\"Operation\":\"Start\",\"Path\":\"C:\\\\foo\"}", "{\"Operation\":\"Start\",\"Operation\":\"Shutdown\"}" })
         Reject(() => Protocol.Parse(Encoding.UTF8.GetBytes(input)));
     Reject(() => Protocol.Parse(new byte[4097]));
+});
+Test("closed pipe reports transport failure", () =>
+{
+    var name = "DevOS-test-" + Guid.NewGuid().ToString("N");
+    using var server = new NamedPipeServerStream(name, PipeDirection.Out, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+    using var client = new NamedPipeClientStream(".", name, PipeDirection.In, PipeOptions.Asynchronous);
+    var accepted = server.WaitForConnectionAsync();
+    client.Connect();
+    accepted.GetAwaiter().GetResult();
+    server.Dispose();
+    try { PipeProtocol.ReadAsync(client, 65536, CancellationToken.None).GetAwaiter().GetResult(); }
+    catch (IOException ex) when (ex.InnerException is EndOfStreamException) { return; }
+    throw new Exception("Expected a transport failure after pipe closure.");
 });
 var failed = 0;
 foreach (var test in tests)

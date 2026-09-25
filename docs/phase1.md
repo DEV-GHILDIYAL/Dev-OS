@@ -1,6 +1,12 @@
 # Phase 1 Implementation And Evidence
 
-Date: 2026-09-25. Status: INCOMPLETE, awaiting Windows reboot and successful media retrieval before VM integration testing. Phase 2 has not started.
+Date: 2026-09-25. Status: INCOMPLETE. The current checkout host lacks a supported Windows edition and sufficient storage for VM integration testing. Earlier testing on a different host awaited a reboot and successful media retrieval. Phase 2 has not started.
+
+## Current Checkout Host Check
+
+The read-only compatibility check on this checkout's host at 2026-09-25T17:07:20Z reports Windows 11 Home Single Language, no Hyper-V management module or VMMS service, no registered DevOS VM, 23 GiB free on the ProgramData drive, and about 4.9 GiB available RAM. The check now reports `WINDOWS_EDITION_UNSUPPORTED` for this Home edition. [Microsoft states that the Hyper-V role cannot be installed on Windows Home](https://learn.microsoft.com/en-us/windows-server/virtualization/hyper-v/get-started/install-hyper-v?pivots=windows&tabs=gui), so the VM acceptance sequence cannot run on this host. The fixed 48 GiB disk policy also requires at least 74 GiB free before creation. These observations supersede the earlier host's compatibility and storage figures for work done in this checkout; the earlier integration results below remain historical evidence from that host.
+
+The Release solution builds with installed .NET SDK 10.0.203 after allowing later .NET 10 feature bands. Eight C# tests and thirteen production PowerShell policy tests pass; self-contained launcher and broker artifacts publish. The new host-edition policy test and a real read-only compatibility query pass. No installation, media download, VM creation, guest boot, or shutdown was attempted on this unsupported host. Phase 1 remains incomplete until those live steps pass on a supported host with enough storage.
 
 ## Implemented Architecture
 
