@@ -1,0 +1,29 @@
+<Window x:Class="DevOS.Launcher.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="DevOS - Phase 1" Width="850" Height="760" MinWidth="620" MinHeight="540" Background="#171B1A" FontFamily="Segoe UI" FontSize="14">
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel Margin="28">
+      <TextBlock Text="DevOS" FontSize="30" FontWeight="SemiBold"/>
+      <TextBlock Text="Phase 1 environment - encryption not configured." Foreground="#F1C968" Margin="0,6,0,24"/>
+      <TextBlock Text="System" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
+      <TextBlock x:Name="SystemInfo" Text="Checking compatibility..." LineHeight="24"/>
+      <WrapPanel Margin="0,16,0,8" x:Name="CheckActions">
+        <Button Content="Check Compatibility" Click="Check_Click"/>
+        <Button Content="Check with Administrator Access" Click="AdminCheck_Click"/>
+      </WrapPanel>
+      <Separator Background="#404944" Margin="0,0,0,18"/>
+      <TextBlock Text="DevOS Environment" FontSize="18" FontWeight="SemiBold"/>
+      <TextBlock x:Name="VmState" Text="ERROR / UNKNOWN" FontSize="22" FontWeight="SemiBold" Margin="0,10,0,4"/>
+      <TextBlock x:Name="VmDetails" Text="" Foreground="#ABB9B2" Margin="0,0,0,18"/>
+      <WrapPanel x:Name="Actions">
+        <Button Content="Verify Debian Media" Tag="PrepareMedia" Click="Operation_Click"/>
+        <Button Content="Create DevOS" Tag="Create" Click="Operation_Click"/>
+        <Button Content="Start" Tag="Start" Click="Operation_Click"/>
+        <Button Content="Open Console" Click="Console_Click"/>
+        <Button Content="Shutdown" Tag="Shutdown" Click="Operation_Click"/>
+        <Button Content="Installation Network / Ordinary NAT" Tag="ConnectInstallationNetwork" Click="Operation_Click"/>
+        <Button Content="Disconnect Network" Tag="DisconnectNetwork" Click="Operation_Click"/>
+        <Button Content="Eject Installer" Tag="EjectMedia" Click="Operation_Click"/>
+      </WrapPanel>
+      <TextBlock x:Name="Result" Text="" Margin="0,16,0,0" Foreground="#F1C968"/>
+    </StackPanel>
+  </ScrollViewer>
+</Window>

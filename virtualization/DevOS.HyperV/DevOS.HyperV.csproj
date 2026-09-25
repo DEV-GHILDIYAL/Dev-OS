@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup><EmbeddedResource Include="Scripts\*.ps1" /></ItemGroup>
+</Project>
